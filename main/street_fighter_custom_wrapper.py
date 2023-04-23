@@ -99,6 +99,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
             if curr_player_health < 0 and curr_oppont_health < 0:
                 # Draw
                 custom_done = False
+                custom_reward = 0
                 self.during_transation = True
             elif curr_player_health < 0:
                 print("curr_player_health < 0")
