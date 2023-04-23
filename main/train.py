@@ -21,7 +21,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 
 from street_fighter_custom_wrapper import StreetFighterCustomWrapper
 
-NUM_ENV = 1
+NUM_ENV = 16
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -46,7 +46,7 @@ def make_env(game, state, seed=0):
             use_restricted_actions=retro.Actions.FILTERED, 
             obs_type=retro.Observations.IMAGE    
         )
-        env = StreetFighterCustomWrapper(env, rendering=True)
+        env = StreetFighterCustomWrapper(env, rendering=False)
         env = Monitor(env)
         env.seed(seed)
         return env
