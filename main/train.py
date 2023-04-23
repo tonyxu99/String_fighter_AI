@@ -59,17 +59,17 @@ def main():
 
     # Set linear schedule for learning rate
     # Start
-    lr_schedule = linear_schedule(2.5e-4, 2.5e-6)
+    # lr_schedule = linear_schedule(2.5e-4, 2.5e-6)
 
     # fine-tune
-    # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
+    lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
 
     # Set linear scheduler for clip range
     # Start
-    clip_range_schedule = linear_schedule(0.15, 0.025)
+    # clip_range_schedule = linear_schedule(0.15, 0.025)
 
     # fine-tune
-    # clip_range_schedule = linear_schedule(0.075, 0.025)
+    clip_range_schedule = linear_schedule(0.075, 0.025)
 
     model = PPO(
         "CnnPolicy", 

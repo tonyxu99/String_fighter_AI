@@ -1,2 +1,4 @@
 main/__pycache__/
 venv/
+main/trained_models_test/
+main/logs/
