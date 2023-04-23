@@ -121,7 +121,7 @@ class Interactive(abc.ABC):
 
             if 'B' in keys:
                 print("try to save state")
-                self.save_state_to_file()
+                self.save_state_to_file("Champion.Level12.RyuVsBison.2Player.state")
 
             player_act = self.keys_to_act(keys)
 
@@ -257,13 +257,3 @@ class RetroInteractive(Interactive):
         }
         return [inputs[b] for b in self._buttons]
 
-
-def main():
-    game = "StreetFighterIISpecialChampionEdition-Genesis"
-    state="Champion.Level12.RyuVsBison"
-    ia = RetroInteractive(game=game, state=state)
-    ia.run()
-
-
-if __name__ == '__main__':
-    main()
