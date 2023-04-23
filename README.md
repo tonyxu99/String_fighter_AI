@@ -27,3 +27,19 @@ python play_with_ai.py
 * Leg - 'J', 'K', 'L'
 
 You can change the key mapping in keys_to_act() in interactive.py
+
+### Trouble Shotting
+You may see the following error 
+```
+Traceback (most recent call last):
+  File "play_with_ai.py", line 41, in <module>
+    model = PPO.load(os.path.join(MODEL_DIR, MODEL_NAME), env=env)
+  File "/home/tony/AI/String_fighter_AI/venv/lib/python3.8/site-packages/stable_baselines3/common/base_class.py", line 684, in load
+    check_for_correct_spaces(env, data["observation_space"], data["action_space"])
+  File "/home/tony/AI/String_fighter_AI/venv/lib/python3.8/site-packages/stable_baselines3/common/utils.py", line 230, in check_for_correct_spaces
+    raise ValueError(f"Action spaces do not match: {action_space} != {env.action_space}")
+ValueError: Action spaces do not match: MultiBinary(12) != MultiBinary(24)
+free(): invalid pointer
+Aborted (core dumped)
+```
+This is because linyi's AI was trained with 1 player mode, so the AI expects 1 player action input. To work around the issue, just simplely comment out the action spaces validation in site-packages/stable_baselines3/common/utils.py (line 230).
