@@ -28,6 +28,8 @@ python play_with_ai.py
 * Move - 'A', 'W', 'S', 'D'
 * Arm - 'U', 'I', 'O'
 * Leg - 'J', 'K', 'L'
+* START (Join the fight / Pause) - 'N'
+* Save state - 'B'
 
 You can change the key mapping in keys_to_act() in interactive.py
 
