@@ -4,8 +4,8 @@ This project is folked from linyi's street-fighter-ai project. (https://github.c
 
 My project has added the following features:
 
-* Added a feature for human to play with the AI.
-* Save state to a file. 
+* Added a feature for human to [play aginst the AI](#play-aginst-ai).
+* [Save state to a file](#save-state). 
 * Allow human to press "START" button to join the fight (from 1 Player mode to 2 Player mode).
 * Block AI to press "START" button as pressing "START" button will pause the game.
 
@@ -18,7 +18,7 @@ python .\utils\print_game_lib_folder.py
 ```
 Copy `Champion.Level12.RyuVsBison.2Player.state`, `Champion.Level12.RyuVsBison.state`, `data.json`, `metadata.json`, and `scenario.json` files from the `data/` folder file to gym-retro game folder. 
 
-### Play
+### <a name="play-aginst-ai"></a> Play aginst the AI
 ```bash
 cd main
 python play_with_ai.py
@@ -49,6 +49,6 @@ Aborted (core dumped)
 ```
 This is because linyi's AI was trained with 1 player mode, so the AI expects 1 player action input. To work around the issue, just simplely comment out the action spaces validation in site-packages/stable_baselines3/common/utils.py (line 230).
 
-## Save state
+## <a name="save-state"></a>Save state
 
 During playing with AI, you can press "B" button to save the state to a file (Champion.Level12.RyuVsBison.2Player.state）in the current directory. You can change the file name at line#124 in interactive.py
