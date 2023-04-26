@@ -9,7 +9,7 @@ My project has added the following features:
 * Allow human to press "START" button to join the fight (from 1 Player mode to 2 Player mode).
 * Block AI to press "START" button as pressing "START" button will pause the game.
 * Add --reset=[round|match|game] commmand line parameter to test.py and train.py
-* [AI vs AI test] (#ai-vs-ai-test)
+* [AI vs AI test](#ai-vs-ai-test)
 * AI vs AI training (comming soon)
 
 ## Play with the AI
