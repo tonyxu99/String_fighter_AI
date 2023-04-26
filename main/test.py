@@ -12,18 +12,18 @@
 
 import os
 import time 
+import argparse
 
 import retro
-import numpy as np
 from stable_baselines3 import PPO
 
 from street_fighter_custom_wrapper import StreetFighterCustomWrapper
 
-RESET_ROUND = True  # Whether to reset the round when fight is over. 
+#RESET_ROUND = False  # Whether to reset the round when fight is over. 
 RENDERING = True    # Whether to render the game screen.
 
-MODEL_NAME = r"ppo_ryu_2500000_steps_updated" # Speicify the model file to load. Model "ppo_ryu_2500000_steps_updated" is capable of beating the final stage (Bison) of the game.
-#MODEL_NAME = r"ppo_ryu_37500000_steps"
+#MODEL_NAME = r"ppo_ryu_2500000_steps_updated" # Speicify the model file to load. Model "ppo_ryu_2500000_steps_updated" is capable of beating the final stage (Bison) of the game.
+MODEL_NAME = r"ppo_ryu_10000000_steps"
 # Model notes:
 # ppo_ryu_2000000_steps_updated: Just beginning to overfit state, generalizable but not quite capable.
 # ppo_ryu_2500000_steps_updated: Approaching the final overfitted state, cannot dominate first round but partially generalizable. High chance of beating the final stage.
@@ -31,26 +31,42 @@ MODEL_NAME = r"ppo_ryu_2500000_steps_updated" # Speicify the model file to load.
 # ppo_ryu_7000000_steps_updated: Overfitted, dominates first round but not generalizable. 
 
 RANDOM_ACTION = False
-NUM_EPISODES = 30 # Make sure NUM_EPISODES >= 3 if you set RESET_ROUND to False to see the whole final stage game.
-MODEL_DIR = r"trained_models/"
+NUM_EPISODES = 30
+MODEL_DIR = r"trained_models_test/"
 
-def make_env(game, state):
+def make_env(game, state, reset_type):
     def _init():
         env = retro.make(
             game=game, 
             state=state, 
             use_restricted_actions=retro.Actions.FILTERED,
-            obs_type=retro.Observations.IMAGE,
-            players=1
+            obs_type=retro.Observations.IMAGE
         )
-        print("buttons:" + str(env.buttons))
-        env = StreetFighterCustomWrapper(env, reset_round=RESET_ROUND, rendering=RENDERING)
+        env = StreetFighterCustomWrapper(env, reset_type=reset_type, rendering=RENDERING)
         return env
     return _init
 
+parser = argparse.ArgumentParser(description='Reset game stats')
+parser.add_argument('--reset', choices=['round', 'match', 'game'], help='Reset stats for a round, match, or game')
+
+reset_type = "round"
+args = parser.parse_args()
+if args.reset == 'round':
+    print('Resetting stats for a round...')
+    reset_type = "round"
+elif args.reset == 'match':
+    print('Resetting stats for a match...')
+    reset_type = "match"
+elif args.reset == 'game':
+    print('Resetting stats for a game...')
+    reset_type = "game"
+else:
+    print('No reset option specified. Resetting stats for a round bydefault')
+    reset_type = "round"
+
 game = "StreetFighterIISpecialChampionEdition-Genesis"
-env = make_env(game, state="Champion.Level12.RyuVsBison")()
-#env = make_env(game, state="Champion.Level1.RyuVsGuile")()
+#env = make_env(game, state="Champion.Level12.RyuVsBison")()
+env = make_env(game, state="Champion.Level1.RyuVsGuile", reset_type=reset_type)()
 # model = PPO("CnnPolicy", env)
 
 if not RANDOM_ACTION:
@@ -68,8 +84,7 @@ print("\nFighting Begins!\n")
 for _ in range(num_episodes):
     done = False
     
-    if RESET_ROUND:
-        obs = env.reset()
+    obs = env.reset()
 
     total_reward = 0
 
@@ -77,8 +92,6 @@ for _ in range(num_episodes):
         timestamp = time.time()
 
         if RANDOM_ACTION:
-            #p1_action = env.get_player_agent(0).act(env.get_state()[0])
-            #p2_action = env.get_player_agent(1).act(env.get_state()[1])
             action = env.action_space.sample()
         else:
             action, _states = model.predict(obs)
@@ -97,11 +110,6 @@ for _ in range(num_episodes):
     print("Total reward: {}\n".format(total_reward))
     episode_reward_sum += total_reward
 
-    if not RESET_ROUND:
-        while info['enemy_hp'] < 0 or info['agent_hp'] < 0:
-        # Inter scene transition. Do nothing.
-            obs, reward, done, info = env.step([0] * 12)
-            env.render()
 
 env.close()
 print("Winning rate: {}".format(1.0 * num_victory / num_episodes))

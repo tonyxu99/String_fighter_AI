@@ -12,6 +12,7 @@
 
 import os
 import sys
+import argparse
 
 import retro
 from stable_baselines3 import PPO
@@ -38,7 +39,7 @@ def linear_schedule(initial_value, final_value=0.0):
 
     return scheduler
 
-def make_env(game, state, seed=0):
+def make_env(game, state, reset_type, seed=0):
     def _init():
         env = retro.make(
             game=game, 
@@ -46,30 +47,48 @@ def make_env(game, state, seed=0):
             use_restricted_actions=retro.Actions.FILTERED, 
             obs_type=retro.Observations.IMAGE    
         )
-        env = StreetFighterCustomWrapper(env, rendering=False)
+        env = StreetFighterCustomWrapper(env, reset_type=reset_type)
         env = Monitor(env)
         env.seed(seed)
         return env
     return _init
 
 def main():
+    parser = argparse.ArgumentParser(description='Reset game stats')
+    parser.add_argument('--reset', choices=['round', 'match', 'game'], help='Reset stats for a round, match, or game')
+
+    reset_type = "round"
+    args = parser.parse_args()
+    if args.reset == 'round':
+        print('Resetting stats for a round...')
+        reset_type = "round"
+    elif args.reset == 'match':
+        print('Resetting stats for a match...')
+        reset_type = "match"
+    elif args.reset == 'game':
+        print('Resetting stats for a game...')
+        reset_type = "game"
+    else:
+        print('No reset option specified. Resetting stats for a round bydefault')
+        reset_type = "round"
+
     # Set up the environment and model
     game = "StreetFighterIISpecialChampionEdition-Genesis"
-    env = SubprocVecEnv([make_env(game, state="Champion.Level1.RyuVsGuile", seed=i) for i in range(NUM_ENV)])
+    env = SubprocVecEnv([make_env(game, state="Champion.Level1.RyuVsGuile", reset_type=reset_type, seed=i) for i in range(NUM_ENV)])
 
     # Set linear schedule for learning rate
     # Start
-    # lr_schedule = linear_schedule(2.5e-4, 2.5e-6)
+    lr_schedule = linear_schedule(2.5e-4, 2.5e-6)
 
     # fine-tune
-    lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
+    # lr_schedule = linear_schedule(5.0e-5, 2.5e-6)
 
     # Set linear scheduler for clip range
     # Start
-    # clip_range_schedule = linear_schedule(0.15, 0.025)
+    clip_range_schedule = linear_schedule(0.15, 0.025)
 
     # fine-tune
-    clip_range_schedule = linear_schedule(0.075, 0.025)
+    # clip_range_schedule = linear_schedule(0.075, 0.025)
 
     model = PPO(
         "CnnPolicy", 
@@ -86,7 +105,7 @@ def main():
     )
 
     # Set the save directory
-    save_dir = "trained_models_test"
+    save_dir = "ryu_reset_match_models"
     os.makedirs(save_dir, exist_ok=True)
 
     # Load the model from file
@@ -112,7 +131,7 @@ def main():
         sys.stdout = log_file
     
         model.learn(
-            total_timesteps=int(100000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
+            total_timesteps=int(20000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
             callback=[checkpoint_callback]#, stage_increase_callback]
         )
         env.close()
