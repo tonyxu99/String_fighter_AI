@@ -121,7 +121,7 @@ class Interactive(abc.ABC):
 
             if 'B' in keys:
                 print("try to save state")
-                self.save_state_to_file("Champion.Level12.RyuVsBison.2Player.state")
+                self.save_state_to_file("Champion.Level1.RyuVsRyu.2Player.state")
 
             player_act = self.keys_to_act(keys)
 

@@ -9,6 +9,8 @@ My project has added the following features:
 * Allow human to press "START" button to join the fight (from 1 Player mode to 2 Player mode).
 * Block AI to press "START" button as pressing "START" button will pause the game.
 * Add --reset=[round|match|game] commmand line parameter to test.py and train.py
+* [AI vs AI test] (#ai-vs-ai-test)
+* AI vs AI training (comming soon)
 
 ## Play with the AI
 
@@ -17,7 +19,7 @@ Find out the gym-retro game folder
 ```bash
 python .\utils\print_game_lib_folder.py
 ```
-Copy `Champion.Level12.RyuVsBison.2Player.state`, `Champion.Level12.RyuVsBison.state`, `data.json`, `metadata.json`, and `scenario.json` files from the `data/` folder file to gym-retro game folder. 
+Copy all files from the `data/` folder to gym-retro game folder. 
 
 ### <a name="play-aginst-ai"></a> Play aginst the AI
 ```bash
@@ -49,6 +51,14 @@ free(): invalid pointer
 Aborted (core dumped)
 ```
 This is because linyi's AI was trained with 1 player mode, so the AI expects 1 player action input. To work around the issue, just simplely comment out the action spaces validation in site-packages/stable_baselines3/common/utils.py (line 230).
+
+## AI vs AI test
+Copy `Champion.Level1.RyuVsRyu.2Player.state` files from the `data/` folder file to gym-retro game folder. 
+
+```bash
+cd main
+python test_ai_vs_ai.py --reset=match
+```
 
 ## <a name="save-state"></a>Save state
 
