@@ -19,22 +19,17 @@ from stable_baselines3 import PPO
 
 from street_fighter_custom_wrapper import StreetFighterCustomWrapper
 
-#RESET_ROUND = False  # Whether to reset the round when fight is over. 
-RENDERING = True    # Whether to render the game screen.
-
-MODEL_NAME = r"ppo_ryu_2500000_steps_updated" # Speicify the model file to load. Model "ppo_ryu_2500000_steps_updated" is capable of beating the final stage (Bison) of the game.
+DEFAULT_MODEL_FILE = r"trained_models/ppo_ryu_2000000_steps_updated" # Speicify the model file to load. Model "ppo_ryu_2500000_steps_updated" is capable of beating the final stage (Bison) of the game.
 #MODEL_NAME = r"ppo_ryu_10000000_steps"
 # Model notes:
 # ppo_ryu_2000000_steps_updated: Just beginning to overfit state, generalizable but not quite capable.
 # ppo_ryu_2500000_steps_updated: Approaching the final overfitted state, cannot dominate first round but partially generalizable. High chance of beating the final stage.
 # ppo_ryu_3000000_steps_updated: Near the final overfitted state, almost dominate first round but barely generalizable.
 # ppo_ryu_7000000_steps_updated: Overfitted, dominates first round but not generalizable. 
+DEFAULT_STATE = "Champion.Level1.RyuVsGuile"
 
-RANDOM_ACTION = False
-NUM_EPISODES = 30
-MODEL_DIR = r"trained_models/"
 
-def make_env(game, state, reset_type):
+def make_env(game, state, reset_type, rendering):
     def _init():
         env = retro.make(
             game=game, 
@@ -42,46 +37,40 @@ def make_env(game, state, reset_type):
             use_restricted_actions=retro.Actions.FILTERED,
             obs_type=retro.Observations.IMAGE
         )
-        env = StreetFighterCustomWrapper(env, reset_type=reset_type, rendering=RENDERING)
+        env = StreetFighterCustomWrapper(env, reset_type=reset_type, rendering=rendering)
         return env
     return _init
 
 parser = argparse.ArgumentParser(description='Reset game stats')
-parser.add_argument('--reset', choices=['round', 'match', 'game'], help='Reset stats for a round, match, or game')
+parser.add_argument('--reset', choices=['round', 'match', 'game'], help='Reset stats for a round, a match, or the whole game', default='round')
+parser.add_argument('--model-file', help='The model file to load. By default trained_models/ppo_ryu_2000000_steps_updated', default=DEFAULT_MODEL_FILE)
+parser.add_argument('--state', help='The state file to load. By default Champion.Level1.RyuVsGuile', default=DEFAULT_STATE)
+parser.add_argument('--skip-render', action='store_true', help='Whether to skip to render the game screen.')
+parser.add_argument('--random-action', action='store_true', help='Use ramdom action instead of')
+parser.add_argument('--num-episodes', type=int, help='Play how many episodes', default=30)
 
-reset_type = "round"
 args = parser.parse_args()
-if args.reset == 'round':
-    print('Resetting stats for a round...')
-    reset_type = "round"
-elif args.reset == 'match':
-    print('Resetting stats for a match...')
-    reset_type = "match"
-elif args.reset == 'game':
-    print('Resetting stats for a game...')
-    reset_type = "game"
-else:
-    print('No reset option specified. Resetting stats for a round bydefault')
-    reset_type = "round"
+reset_type = args.reset
+
+print("command line args:" + str(args))
 
 game = "StreetFighterIISpecialChampionEdition-Genesis"
 #env = make_env(game, state="Champion.Level12.RyuVsBison")()
-env = make_env(game, state="Champion.Level1.RyuVsGuile", reset_type=reset_type)()
+env = make_env(game, state=args.state, reset_type=args.reset, rendering=not args.skip_render)()
 # model = PPO("CnnPolicy", env)
 
-if not RANDOM_ACTION:
-    model = PPO.load(os.path.join(MODEL_DIR, MODEL_NAME), env=env)
+if not args.random_action:
+    model = PPO.load(args.model_file, env=env)
 
 obs = env.reset()
 done = False
 
-num_episodes = NUM_EPISODES
 episode_reward_sum = 0
 num_victory = 0
 
 print("\nFighting Begins!\n")
 
-for _ in range(num_episodes):
+for _ in range(args.num_episodes):
     done = False
     
     obs = env.reset()
@@ -91,7 +80,7 @@ for _ in range(num_episodes):
     while not done:
         timestamp = time.time()
 
-        if RANDOM_ACTION:
+        if args.random_action:
             action = env.action_space.sample()
         else:
             action, _states = model.predict(obs)
@@ -112,8 +101,8 @@ for _ in range(num_episodes):
 
 
 env.close()
-print("Winning rate: {}".format(1.0 * num_victory / num_episodes))
-if RANDOM_ACTION:
-    print("Average reward for random action: {}".format(episode_reward_sum/num_episodes))
+print("Winning rate: {}".format(1.0 * num_victory / args.num_episodes))
+if args.random_action:
+    print("Average reward for random action: {}".format(episode_reward_sum/args.num_episodes))
 else:
-    print("Average reward for {}: {}".format(MODEL_NAME, episode_reward_sum/num_episodes))
+    print("Average reward for {}: {}".format(args.model_file, episode_reward_sum/args.num_episodes))

@@ -22,10 +22,10 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 
 from street_fighter_custom_wrapper import StreetFighterCustomWrapper
 
-NUM_ENV = 16
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
+DEFAULT_STATE = "Champion.Level1.RyuVsGuile"
 # Linear scheduler
 def linear_schedule(initial_value, final_value=0.0):
 
@@ -39,7 +39,7 @@ def linear_schedule(initial_value, final_value=0.0):
 
     return scheduler
 
-def make_env(game, state, reset_type, seed=0):
+def make_env(game, state, reset_type, rendering, seed=0):
     def _init():
         env = retro.make(
             game=game, 
@@ -47,7 +47,7 @@ def make_env(game, state, reset_type, seed=0):
             use_restricted_actions=retro.Actions.FILTERED, 
             obs_type=retro.Observations.IMAGE    
         )
-        env = StreetFighterCustomWrapper(env, reset_type=reset_type)
+        env = StreetFighterCustomWrapper(env, rendering=rendering, reset_type=reset_type)
         env = Monitor(env)
         env.seed(seed)
         return env
@@ -55,26 +55,22 @@ def make_env(game, state, reset_type, seed=0):
 
 def main():
     parser = argparse.ArgumentParser(description='Reset game stats')
-    parser.add_argument('--reset', choices=['round', 'match', 'game'], help='Reset stats for a round, match, or game')
+    parser.add_argument('--reset', choices=['round', 'match', 'game'], help='Reset stats for a round, a match, or the whole game', default='round')
+    parser.add_argument('--model-file', help='The model to continue to learn from.')
+    parser.add_argument('--save-dir', help='The directory to save the trained models.', default = "trained_models")
+    parser.add_argument('--model-name-prefix', help='The prefix of the model names to save.', default = "ppo_ryu")
+    parser.add_argument('--state', help='The state file to load. By default Champion.Level1.RyuVsGuile', default=DEFAULT_STATE)
+    parser.add_argument('--render', action='store_true', help='Whether to render the game screen.')
+    parser.add_argument('--num-env', type=int, help='How many envirorments to create', default=16)
+    parser.add_argument('--total-steps', type=int, help='How many total steps to train', default=20000000)
 
-    reset_type = "round"
     args = parser.parse_args()
-    if args.reset == 'round':
-        print('Resetting stats for a round...')
-        reset_type = "round"
-    elif args.reset == 'match':
-        print('Resetting stats for a match...')
-        reset_type = "match"
-    elif args.reset == 'game':
-        print('Resetting stats for a game...')
-        reset_type = "game"
-    else:
-        print('No reset option specified. Resetting stats for a round bydefault')
-        reset_type = "round"
 
+    print("command line args:" + str(args))
+                                 
     # Set up the environment and model
     game = "StreetFighterIISpecialChampionEdition-Genesis"
-    env = SubprocVecEnv([make_env(game, state="Champion.Level1.RyuVsGuile", reset_type=reset_type, seed=i) for i in range(NUM_ENV)])
+    env = SubprocVecEnv([make_env(game, state=args.state, reset_type=args.reset, rendering=args.render, seed=i) for i in range(args.num_env)])
 
     # Set linear schedule for learning rate
     # Start
@@ -101,12 +97,15 @@ def main():
         gamma=0.94,
         learning_rate=lr_schedule,
         clip_range=clip_range_schedule,
-        tensorboard_log="logs"
+        tensorboard_log=LOG_DIR
     )
 
+    if (args.model_file):
+        print("load model from " + args.model_file)
+        model.set_parameters(args.model_file)
+
     # Set the save directory
-    save_dir = "ryu_reset_match_models"
-    os.makedirs(save_dir, exist_ok=True)
+    os.makedirs(args.save_dir, exist_ok=True)
 
     # Load the model from file
     # model_path = "trained_models/ppo_ryu_7000000_steps.zip"
@@ -122,16 +121,16 @@ def main():
     # Set up callbacks
     # Note that 1 timesetp = 6 frame
     checkpoint_interval = 31250 # checkpoint_interval * num_envs = total_steps_per_checkpoint
-    checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=save_dir, name_prefix="ppo_ryu")
+    checkpoint_callback = CheckpointCallback(save_freq=checkpoint_interval, save_path=args.save_dir, name_prefix=args.model_name_prefix)
 
     # Writing the training logs from stdout to a file
     original_stdout = sys.stdout
-    log_file_path = os.path.join(save_dir, "training_log.txt")
+    log_file_path = os.path.join(args.save_dir, "training_log.txt")
     with open(log_file_path, 'w') as log_file:
         sys.stdout = log_file
     
         model.learn(
-            total_timesteps=int(20000000), # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
+            total_timesteps=args.total_steps, # total_timesteps = stage_interval * num_envs * num_stages (1120 rounds)
             callback=[checkpoint_callback]#, stage_increase_callback]
         )
         env.close()
@@ -140,7 +139,7 @@ def main():
     sys.stdout = original_stdout
 
     # Save the final model
-    model.save(os.path.join(save_dir, "ppo_sf2_ryu_final.zip"))
+    model.save(os.path.join(args.save_dir, args.model_name_prefix + "_final.zip"))
 
 if __name__ == "__main__":
     main()
