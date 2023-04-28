@@ -50,7 +50,6 @@ parser.add_argument('--random-action', action='store_true', help='Use ramdom act
 parser.add_argument('--num-episodes', type=int, help='Play how many episodes', default=30)
 
 args = parser.parse_args()
-reset_type = args.reset
 
 print("command line args:" + str(args))
 

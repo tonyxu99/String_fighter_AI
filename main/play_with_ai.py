@@ -25,7 +25,7 @@ def make_env(game, state):
         env = retro.make(
             game=game, 
             state=state, 
-            use_restricted_actions=retro.Actions.FILTERED,
+            use_restricted_actions=retro.Actions.ALL,
             obs_type=retro.Observations.IMAGE,
             players=2
         )
