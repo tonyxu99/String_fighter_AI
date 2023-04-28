@@ -10,6 +10,7 @@ My project has added the following features:
 * Block AI to press "START" button as pressing "START" button will pause the game.
 * Add [commmand line parameters](#commmand-line-parameters) to test.py and train.py
 * [AI vs AI test](#ai-vs-ai-test)
+* [Allow AI to play as player2](#player2_ai)
 * AI vs AI training (comming soon)
 
 ## Play with the AI
@@ -59,6 +60,14 @@ Copy `Champion.Level1.RyuVsRyu.2Player.state` files from the `data/` folder file
 cd main
 python test_ai_vs_ai.py --reset=match
 ```
+## <a name="player2_ai"></a>Train an AI to play as player 2 (right side)
+1. Run play_with_ai.py
+2. Press "N" to join the game as player2
+3. Beat the player 1 (AI)
+4. Press "B" to save the state. The state file will be save.state in the current directory
+5. Modify the state file name as you like and copy to the retro game directory.
+6. You can train the AI as P2:```python train.py --state <state name you saved> --P2AI --render```
+7. Test the AI as P2:```python test.py --state <state name you saved> --P2AI ```
 
 ## <a name="save-state"></a>Save state
 
