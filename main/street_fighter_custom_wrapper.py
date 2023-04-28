@@ -19,9 +19,13 @@ import numpy as np
 
 # Custom environment wrapper
 class StreetFighterCustomWrapper(gym.Wrapper):
-    def __init__(self, env, reset_type="round", rendering=False, step_extra_frame=True):
+    def __init__(self, env, reset_type="round", rendering=False, step_extra_frame=True, p2ai = False):
         super(StreetFighterCustomWrapper, self).__init__(env)
         self.env = env
+
+        self.p2ai = p2ai
+        if p2ai:
+            self.action_space = gym.spaces.MultiBinary(12)
 
         # Use a deque to store the last 9 frames
         self.num_frames = 9
@@ -67,6 +71,8 @@ class StreetFighterCustomWrapper(gym.Wrapper):
 
     def step(self, action):
         custom_done = False
+        if (self.p2ai):
+            action = np.concatenate(([0] * 12, action))
         obs, _reward, _done, info = self.env.step(action)
         self.frame_stack.append(obs[::2, ::2, :])
 
@@ -116,7 +122,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
                         print("Player loses the game")
                         self.player_won = 0
                         self.oppont_won = 0
-                        custom_done = True
+                        custom_done = not self.reset_type == "never"
 
             elif curr_oppont_health < 0:
                 print("The round is over and player wins.")

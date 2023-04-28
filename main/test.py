@@ -29,15 +29,19 @@ DEFAULT_MODEL_FILE = r"trained_models/ppo_ryu_2000000_steps_updated" # Speicify 
 DEFAULT_STATE = "Champion.Level1.RyuVsGuile"
 
 
-def make_env(game, state, reset_type, rendering):
+def make_env(game, state, reset_type, rendering, p2ai):
     def _init():
+        players = 1
+        if p2ai:
+            players = 2
         env = retro.make(
             game=game, 
             state=state, 
             use_restricted_actions=retro.Actions.FILTERED,
-            obs_type=retro.Observations.IMAGE
+            obs_type=retro.Observations.IMAGE,
+            players=players
         )
-        env = StreetFighterCustomWrapper(env, reset_type=reset_type, rendering=rendering)
+        env = StreetFighterCustomWrapper(env, reset_type=reset_type, rendering=rendering, p2ai=p2ai)
         return env
     return _init
 
@@ -48,6 +52,7 @@ parser.add_argument('--state', help='The state file to load. By default Champion
 parser.add_argument('--skip-render', action='store_true', help='Whether to skip to render the game screen.')
 parser.add_argument('--random-action', action='store_true', help='Use ramdom action instead of')
 parser.add_argument('--num-episodes', type=int, help='Play how many episodes', default=30)
+parser.add_argument('--P2AI', action='store_true', help='AI control player 2.')
 
 args = parser.parse_args()
 
@@ -55,7 +60,7 @@ print("command line args:" + str(args))
 
 game = "StreetFighterIISpecialChampionEdition-Genesis"
 #env = make_env(game, state="Champion.Level12.RyuVsBison")()
-env = make_env(game, state=args.state, reset_type=args.reset, rendering=not args.skip_render)()
+env = make_env(game, state=args.state, reset_type=args.reset, rendering=not args.skip_render, p2ai=args.P2AI)()
 # model = PPO("CnnPolicy", env)
 
 if not args.random_action:
@@ -83,7 +88,7 @@ for _ in range(args.num_episodes):
             action = env.action_space.sample()
         else:
             action, _states = model.predict(obs)
-        action[3] = 0 # Filter out the "START/PAUSE" button
+
         obs, reward, done, info = env.step(action)
 
         if reward != 0:

@@ -39,15 +39,19 @@ def linear_schedule(initial_value, final_value=0.0):
 
     return scheduler
 
-def make_env(game, state, reset_type, rendering, seed=0):
+def make_env(game, state, reset_type, rendering, p2ai = False, seed=0):
     def _init():
+        players = 1
+        if p2ai:
+            players = 2        
         env = retro.make(
             game=game, 
             state=state, 
             use_restricted_actions=retro.Actions.FILTERED, 
-            obs_type=retro.Observations.IMAGE    
+            obs_type=retro.Observations.IMAGE,
+            players=players
         )
-        env = StreetFighterCustomWrapper(env, rendering=rendering, reset_type=reset_type)
+        env = StreetFighterCustomWrapper(env, rendering=rendering, reset_type=reset_type, p2ai=p2ai)
         env = Monitor(env)
         env.seed(seed)
         return env
@@ -63,14 +67,15 @@ def main():
     parser.add_argument('--render', action='store_true', help='Whether to render the game screen.')
     parser.add_argument('--num-env', type=int, help='How many envirorments to create', default=16)
     parser.add_argument('--total-steps', type=int, help='How many total steps to train', default=20000000)
-
+    parser.add_argument('--P2AI', action='store_true', help='AI control player 2.')
+    
     args = parser.parse_args()
 
     print("command line args:" + str(args))
                                  
     # Set up the environment and model
     game = "StreetFighterIISpecialChampionEdition-Genesis"
-    env = SubprocVecEnv([make_env(game, state=args.state, reset_type=args.reset, rendering=args.render, seed=i) for i in range(args.num_env)])
+    env = SubprocVecEnv([make_env(game, state=args.state, reset_type=args.reset, rendering=args.render, p2ai=args.P2AI, seed=i) for i in range(args.num_env)])
 
     # Set linear schedule for learning rate
     # Start

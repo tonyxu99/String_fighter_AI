@@ -30,7 +30,7 @@ def make_env(game, state):
             players=2
         )
         print("buttons:" + str(env.buttons))
-        env = StreetFighterCustomWrapper(env, reset_type="game", rendering=False, step_extra_frame=False)
+        env = StreetFighterCustomWrapper(env, reset_type="never", rendering=False, step_extra_frame=False)
         return env
     return _init
 
