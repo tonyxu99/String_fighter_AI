@@ -92,7 +92,8 @@ class StreetFighterCustomWrapper(gym.Wrapper):
 
         curr_player_health = info['agent_hp']
         curr_oppont_health = info['enemy_hp']
-        
+        timesup = info['round_countdown'] <=0  # Time's up
+
         self.total_timesteps += self.num_step_frames
         
         if (self.during_transation and (curr_player_health < 0 or curr_oppont_health < 0)):
@@ -100,8 +101,8 @@ class StreetFighterCustomWrapper(gym.Wrapper):
             custom_done = False
             custom_reward = 0
         else:
-            self.during_transation = False
-            if curr_player_health < 0 and curr_oppont_health < 0:
+            self.during_transation = False 
+            if (curr_player_health < 0 and curr_oppont_health < 0) or (timesup  and curr_player_health == curr_oppont_health):
                 print ("Draw round")
                 custom_reward = 1
                 if (self.reset_type == "round"):
@@ -109,7 +110,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
                 else:
                     custom_done = False
                     self.during_transation = True
-            elif curr_player_health < 0:
+            elif curr_player_health < 0 or (timesup and curr_player_health < curr_oppont_health):
                 print("The round is over and player loses.")
                 custom_reward = -math.pow(self.full_hp, (curr_oppont_health + 1) / (self.full_hp + 1))    # Use the remaining health points of opponent as penalty. 
                 if (self.reset_type == "round"):
@@ -124,7 +125,7 @@ class StreetFighterCustomWrapper(gym.Wrapper):
                         self.oppont_won = 0
                         custom_done = not self.reset_type == "never"
 
-            elif curr_oppont_health < 0:
+            elif curr_oppont_health < 0 or (timesup and curr_player_health > curr_oppont_health):
                 print("The round is over and player wins.")
                 # custom_reward = curr_player_health * self.reward_coeff # Use the remaining health points of player as reward.
                                                                     # Multiply by reward_coeff to make the reward larger than the penalty to avoid cowardice of agent.
