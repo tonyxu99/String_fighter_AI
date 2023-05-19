@@ -88,7 +88,11 @@ def make_optimize_agent(args):
             print (e)
             return -1000
     return optimize_agent
-    
+
+def study_cb(study: optuna.study.Study, trial: optuna.trial.FrozenTrial):
+    print("best_params={}".format(study.best_params))
+    print("best_trial={}".format(study.best_trial))
+
 def main():
     parser = argparse.ArgumentParser(description='Reset game stats')
     parser.add_argument('--reset', choices=['round', 'match', 'game'], help='Reset stats for a round, a match, or the whole game', default='round')
@@ -105,10 +109,10 @@ def main():
     optimize_agent = make_optimize_agent(args)
     # Creating the experiment 
     study = optuna.create_study(direction='maximize')
-    study.optimize(optimize_agent, n_trials=args.opt_trials, n_jobs=1)
+    study.optimize(optimize_agent, n_trials=args.opt_trials, n_jobs=1, gc_after_trial=True, callbacks=[study_cb])
 
     print("best_params={}".format(study.best_params))
     print("best_trial={}".format(study.best_trial))
-    
+
 if __name__ == "__main__":
     main()
