@@ -101,20 +101,25 @@ def main():
     parser.add_argument('--num-env', type=int, help='How many envirorments to create', default=16)
     parser.add_argument('--total-steps', type=int, help='How many total steps to train', default=100000)
     parser.add_argument('--opt-trials', type=int, help='How many optimization trials', default=100)
-    parser.add_argument('--opt-jobs', type=int, help='How many optimization trials', default=1)
-    parser.add_argument('--eval-episodes', type=int, help='How many optimization trials', default=5)
+    parser.add_argument('--opt-jobs', type=int, help='How many trials to do in paralle', default=1)
+    parser.add_argument('--eval-episodes', type=int, help='How many episodes to use to evaluate the trial', default=5)
+    parser.add_argument('--study-name', help='Study Name')
+    parser.add_argument('--study-storage', help='Study Storage')
 
     args = parser.parse_args()
 
     print("command line args:" + str(args))
                                  
     optimize_agent = make_optimize_agent(args)
-    # Creating the experiment 
-    study = optuna.create_study(direction='maximize')
+    if (args.study_name != None and args.study_storage != None):
+        # optuna create-study --study-name "ryu_opt" --storage "mysql+mysqldb://root@localhost/ryu" --direction maximize
+        study = optuna.load_study(study_name=args.study_name, storage=args.study_storage)
+    else:
+        # Creating the experiment 
+        study = optuna.create_study(direction='maximize')
     study.optimize(optimize_agent, n_trials=args.opt_trials, n_jobs=args.opt_jobs, gc_after_trial=True, callbacks=[study_cb])
 
-    print("#### best_params={}".format(study.best_params))
-    #print("best_trial={}".format(study.best_trial))
+
 
 if __name__ == "__main__":
     main()
