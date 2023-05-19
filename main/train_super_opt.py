@@ -73,9 +73,9 @@ def make_optimize_agent(args):
             model = PPO('CnnPolicy', env, tensorboard_log=LOG_DIR, verbose=0, **model_params)
             model.learn(total_timesteps=args.total_steps)
 
-            print("start svaluate model")
+            print("start evaluate model")
             # Evaluate model 
-            mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=2)
+            mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=3)
             print("Finished svaluate model. mean_reward={}".format(mean_reward))
             env.close()
 
@@ -107,5 +107,8 @@ def main():
     study = optuna.create_study(direction='maximize')
     study.optimize(optimize_agent, n_trials=args.opt_trials, n_jobs=1)
 
+    print("best_params={}".format(study.best_params))
+    print("best_trial={}".format(study.best_trial))
+    
 if __name__ == "__main__":
     main()

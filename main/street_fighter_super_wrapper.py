@@ -150,7 +150,7 @@ class StreetFighterSuperWrapper(gym.Wrapper):
         else:
             self.during_transation = False 
             if (curr_player_health < 0 and curr_oppont_health < 0) or (timesup  and curr_player_health == curr_oppont_health):
-                print ("Draw round")
+                #print ("Draw round")
                 custom_reward = 1
                 if (self.reset_type == "round"):
                     custom_done = True
@@ -158,7 +158,7 @@ class StreetFighterSuperWrapper(gym.Wrapper):
                     custom_done = False
                     self.during_transation = True
             elif curr_player_health < 0 or (timesup and curr_player_health < curr_oppont_health):
-                print("The round is over and player loses.")
+                #print("The round is over and player loses.")
                 custom_reward = -math.pow(self.full_hp, (curr_oppont_health + 1) / (self.full_hp + 1))    # Use the remaining health points of opponent as penalty. 
                 if (self.reset_type == "round"):
                     custom_done = True
@@ -167,13 +167,13 @@ class StreetFighterSuperWrapper(gym.Wrapper):
                     self.oppont_won += 1
                     if (self.oppont_won >= 2):
                         # Player loses the game
-                        print("Player loses the game")
+                        #print("Player loses the game")
                         self.player_won = 0
                         self.oppont_won = 0
                         custom_done = not self.reset_type == "never"
 
             elif curr_oppont_health < 0 or (timesup and curr_player_health > curr_oppont_health):
-                print("The round is over and player wins.")
+                #print("The round is over and player wins.")
                 # custom_reward = curr_player_health * self.reward_coeff # Use the remaining health points of player as reward.
                                                                     # Multiply by reward_coeff to make the reward larger than the penalty to avoid cowardice of agent.
 
@@ -187,7 +187,7 @@ class StreetFighterSuperWrapper(gym.Wrapper):
                     self.player_won += 1
                     if (self.player_won >= 2):
                         # Player wins the match
-                        print("Player wins the match")
+                        #print("Player wins the match")
                         self.player_won = 0
                         self.oppont_won = 0
                         custom_done = self.reset_type == "match"
