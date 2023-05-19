@@ -75,8 +75,8 @@ def make_optimize_agent(args):
 
             print("start evaluate model")
             # Evaluate model 
-            mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=3)
-            print("Finished svaluate model. mean_reward={}".format(mean_reward))
+            mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=args.eval_episodes)
+            print("Finished evaluate model. mean_reward={}".format(mean_reward))
             env.close()
 
             SAVE_PATH = os.path.join(OPT_DIR, 'trial_{}_best_model'.format(trial.number))
@@ -90,8 +90,8 @@ def make_optimize_agent(args):
     return optimize_agent
 
 def study_cb(study: optuna.study.Study, trial: optuna.trial.FrozenTrial):
-    print("best_params={}".format(study.best_params))
-    print("best_trial={}".format(study.best_trial))
+    print("#### best_params={}".format(study.best_params))
+    #print("best_trial={}".format(study.best_trial))
 
 def main():
     parser = argparse.ArgumentParser(description='Reset game stats')
@@ -101,6 +101,8 @@ def main():
     parser.add_argument('--num-env', type=int, help='How many envirorments to create', default=16)
     parser.add_argument('--total-steps', type=int, help='How many total steps to train', default=100000)
     parser.add_argument('--opt-trials', type=int, help='How many optimization trials', default=100)
+    parser.add_argument('--opt-jobs', type=int, help='How many optimization trials', default=1)
+    parser.add_argument('--eval-episodes', type=int, help='How many optimization trials', default=5)
 
     args = parser.parse_args()
 
@@ -109,10 +111,10 @@ def main():
     optimize_agent = make_optimize_agent(args)
     # Creating the experiment 
     study = optuna.create_study(direction='maximize')
-    study.optimize(optimize_agent, n_trials=args.opt_trials, n_jobs=1, gc_after_trial=True, callbacks=[study_cb])
+    study.optimize(optimize_agent, n_trials=args.opt_trials, n_jobs=args.opt_jobs, gc_after_trial=True, callbacks=[study_cb])
 
-    print("best_params={}".format(study.best_params))
-    print("best_trial={}".format(study.best_trial))
+    print("#### best_params={}".format(study.best_params))
+    #print("best_trial={}".format(study.best_trial))
 
 if __name__ == "__main__":
     main()
