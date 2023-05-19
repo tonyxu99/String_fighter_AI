@@ -50,13 +50,13 @@ def make_env(game, state, reset_type, rendering, p2ai = False, seed=0):
 
 def optimize_ppo(trail):
     return {
-        'n_steps': trail.suggest_int('n_steps', 2048, 8192),
-        'batch_size': trail.suggest_int('batch_size', 64, 1024),
-        'n_epochs': trail.suggest_int('batch_size', 3, 8),
-        'gamma': trail.suggest_loguniform('gamma', 0.8, 0.99),
-        'learning_rate': trail.suggest_loguniform('learning_rate', 1e-5, 1e-4),
-        'clip_range': trail.suggest_loguniform('clip_range', 0.1, 0.4),
-        'gae_lambda': trail.suggest_loguniform('gae_lambda', 0.8, 0.99),
+        'n_steps': trail.suggest_int('n_steps', 2048, 8192, 512),
+        'batch_size': trail.suggest_int('batch_size', 64, 512, 64),
+        'n_epochs': trail.suggest_int('n_epochs', 3, 8),
+        'gamma': trail.suggest_float('gamma', 0.8, 0.99),
+        'learning_rate': trail.suggest_float('learning_rate', 1e-5, 1e-4),
+        'clip_range': trail.suggest_float('clip_range', 0.1, 0.4),
+        'gae_lambda': trail.suggest_float('gae_lambda', 0.8, 0.99),
     }
 
 def make_optimize_agent(args):
@@ -73,8 +73,10 @@ def make_optimize_agent(args):
             model = PPO('CnnPolicy', env, tensorboard_log=LOG_DIR, verbose=0, **model_params)
             model.learn(total_timesteps=args.total_steps)
 
+            print("start svaluate model")
             # Evaluate model 
-            mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=5)
+            mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=2)
+            print("Finished svaluate model. mean_reward={}".format(mean_reward))
             env.close()
 
             SAVE_PATH = os.path.join(OPT_DIR, 'trial_{}_best_model'.format(trial.number))
