@@ -65,10 +65,12 @@ def make_optimize_agent(args):
     def optimize_agent(trial):
         try:
             model_params = optimize_ppo(trial) 
-
+            n_envs = model_params['n_envs']
+            del model_params['n_envs']
+            
             # Create environment 
             game = "StreetFighterIISpecialChampionEdition-Genesis"
-            env = SubprocVecEnv([make_env(game, state=args.state, reset_type=args.reset, rendering=args.render, seed=i) for i in range(model_params['n_envs'])])
+            env = SubprocVecEnv([make_env(game, state=args.state, reset_type=args.reset, rendering=args.render, seed=i) for i in range(n_envs)])
 
             # Create algo 
             model = PPO('CnnPolicy', env, tensorboard_log=LOG_DIR, verbose=0, **model_params)
