@@ -57,6 +57,7 @@ def optimize_ppo(trail):
         'learning_rate': trail.suggest_float('learning_rate', 1e-5, 1e-4),
         'clip_range': trail.suggest_float('clip_range', 0.1, 0.4),
         'gae_lambda': trail.suggest_float('gae_lambda', 0.8, 0.99),
+        'n_envs': trail.suggest_int('n_envs', 4, 32, 4),
     }
 
 def make_optimize_agent(args):
@@ -67,7 +68,7 @@ def make_optimize_agent(args):
 
             # Create environment 
             game = "StreetFighterIISpecialChampionEdition-Genesis"
-            env = SubprocVecEnv([make_env(game, state=args.state, reset_type=args.reset, rendering=args.render, seed=i) for i in range(args.num_env)])
+            env = SubprocVecEnv([make_env(game, state=args.state, reset_type=args.reset, rendering=args.render, seed=i) for i in range(model_params['n_envs'])])
 
             # Create algo 
             model = PPO('CnnPolicy', env, tensorboard_log=LOG_DIR, verbose=0, **model_params)
@@ -98,7 +99,6 @@ def main():
     parser.add_argument('--reset', choices=['round', 'match', 'game'], help='Reset stats for a round, a match, or the whole game', default='round')
     parser.add_argument('--state', help='The state file to load. By default Champion.Level1.RyuVsGuile', default=DEFAULT_STATE)
     parser.add_argument('--render', action='store_true', help='Whether to render the game screen.')
-    parser.add_argument('--num-env', type=int, help='How many envirorments to create', default=16)
     parser.add_argument('--total-steps', type=int, help='How many total steps to train', default=100000)
     parser.add_argument('--opt-trials', type=int, help='How many optimization trials', default=100)
     parser.add_argument('--opt-jobs', type=int, help='How many trials to do in paralle', default=1)
