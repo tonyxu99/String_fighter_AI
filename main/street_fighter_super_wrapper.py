@@ -29,7 +29,8 @@ SUPER_ACTION = [
 
 # Custom environment wrapper
 class StreetFighterSuperWrapper(gym.Wrapper):
-    def __init__(self, env, reset_type="round", rendering=False, step_extra_frame=True, p2ai = False, verbose=False):
+    def __init__(self, env, reset_type="round", rendering=False, step_extra_frame=True, p2ai = False, verbose=False
+                 ,reward_coeff_base = 3.0, reward_coeff_coeff = 0.3):
         super(StreetFighterSuperWrapper, self).__init__(env)
         self._env = env
         self._info = None
@@ -45,7 +46,8 @@ class StreetFighterSuperWrapper(gym.Wrapper):
 
         self.num_step_frames = 6
 
-        self.reward_coeff = 3.0
+        self.reward_coeff_base = reward_coeff_base
+        self.reward_coeff_coeff = reward_coeff_coeff
 
         self.total_timesteps = 0
 
@@ -68,6 +70,9 @@ class StreetFighterSuperWrapper(gym.Wrapper):
     
     def _stack_observation(self):
         return np.stack([self.frame_stack[i * 3 + 2][:, :, i] for i in range(3)], axis=-1)
+
+    def get_reward_coeff(self):
+        return self.reward_coeff_base + self.player_won_matches * self.reward_coeff_coeff
 
     def reset(self):
         observation = self._env.reset()
@@ -182,7 +187,7 @@ class StreetFighterSuperWrapper(gym.Wrapper):
                                                                     # Multiply by reward_coeff to make the reward larger than the penalty to avoid cowardice of agent.
 
                 # custom_reward = math.pow(self.full_hp, (5940 - self.total_timesteps) / 5940) * self.reward_coeff # Use the remaining time steps as reward.
-                custom_reward = math.pow(self.full_hp, (curr_player_health + 1) / (self.full_hp + 1)) * self.reward_coeff
+                custom_reward = math.pow(self.full_hp, (curr_player_health + 1) / (self.full_hp + 1)) * self.get_reward_coeff()
 
                 if (self.reset_type == "round"):
                     custom_done = True
@@ -201,7 +206,7 @@ class StreetFighterSuperWrapper(gym.Wrapper):
             else:
                 if (curr_player_health >= 0 and curr_oppont_health >= 0 
                         and curr_player_health <= self.prev_player_health and curr_oppont_health <= self.prev_oppont_health):
-                    custom_reward = self.reward_coeff * (self.prev_oppont_health - curr_oppont_health) - (self.prev_player_health - curr_player_health)
+                    custom_reward = self.get_reward_coeff() * (self.prev_oppont_health - curr_oppont_health) - (self.prev_player_health - curr_player_health)
                 else:
                     custom_reward = 0
                 self.prev_player_health = curr_player_health

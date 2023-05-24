@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import traceback
 
 import retro
 import optuna
@@ -30,7 +31,7 @@ def linear_schedule(initial_value, final_value=0.0):
 
     return scheduler
 
-def make_env(game, state, reset_type, rendering, p2ai = False, seed=0):
+def make_env(game, state, reset_type, rendering, p2ai = False, reward_coeff_base = 3.0, reward_coeff_coeff = 0.3, seed=0):
     def _init():
         players = 1
         if p2ai:
@@ -42,7 +43,8 @@ def make_env(game, state, reset_type, rendering, p2ai = False, seed=0):
             obs_type=retro.Observations.IMAGE,
             players=players
         )
-        env = StreetFighterSuperWrapper(env, rendering=rendering, reset_type=reset_type, p2ai=p2ai)
+        env = StreetFighterSuperWrapper(env, rendering=rendering, reset_type=reset_type, p2ai=p2ai, 
+                                        reward_coeff_base=reward_coeff_base, reward_coeff_coeff=reward_coeff_coeff)
         env = Monitor(env)
         env.seed(seed)
         return env
@@ -57,7 +59,9 @@ def optimize_ppo(trail):
         'learning_rate': trail.suggest_float('learning_rate', 1e-5, 1e-4),
         'clip_range': trail.suggest_float('clip_range', 0.1, 0.4),
         'gae_lambda': trail.suggest_float('gae_lambda', 0.8, 0.99),
-        'n_envs': trail.suggest_int('n_envs', 4, 32, 4),
+        'n_envs': trail.suggest_int('n_envs', 4, 20, 4),
+        'n_reward_coeff_base': trail.suggest_int('n_reward_coeff_base', 2, 5, 1),
+        'n_reward_coeff_coeff': trail.suggest_float('n_reward_coeff_coeff', 0.1, 2),
     }
 
 def make_optimize_agent(args):
@@ -66,11 +70,16 @@ def make_optimize_agent(args):
         try:
             model_params = optimize_ppo(trial) 
             n_envs = model_params['n_envs']
+            reward_coeff_base = model_params['n_reward_coeff_base']
+            reward_coeff_coeff = model_params['n_reward_coeff_coeff']
             del model_params['n_envs']
+            del model_params['n_reward_coeff_base']
+            del model_params['n_reward_coeff_coeff']
             
             # Create environment 
             game = "StreetFighterIISpecialChampionEdition-Genesis"
-            env = SubprocVecEnv([make_env(game, state=args.state, reset_type=args.reset, rendering=args.render, seed=i) for i in range(n_envs)])
+            env = SubprocVecEnv([make_env(game, state=args.state, reset_type=args.reset, rendering=args.render, 
+                        reward_coeff_base=reward_coeff_base, reward_coeff_coeff=reward_coeff_coeff, seed=i) for i in range(n_envs)])
 
             # Create algo 
             model = PPO('CnnPolicy', env, tensorboard_log=LOG_DIR, verbose=0, **model_params)
@@ -78,17 +87,33 @@ def make_optimize_agent(args):
 
             print("start evaluate model")
             # Evaluate model 
-            mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=args.eval_episodes)
-            print("Finished evaluate model. mean_reward={}".format(mean_reward))
+            total_player_won_matches = 0
+
+            for _ in range(args.eval_episodes):
+                done = False
+                
+                obs = env.reset()
+
+                while not done:
+                    action, _states = model.predict(obs)
+
+                    obs, reward, done, info = env.step(action)
+
+                total_player_won_matches += info['player_won_matches']
+
+            print("Finished evaluate model. total_player_won_matches={}".format(total_player_won_matches))
             env.close()
 
             SAVE_PATH = os.path.join(OPT_DIR, 'trial_{}_best_model'.format(trial.number))
             model.save(SAVE_PATH)
 
-            return mean_reward
+            return total_player_won_matches
 
         except Exception as e:
-            print (e)
+            # Capture the traceback as a string
+            traceback_str = traceback.format_exc()
+            # Do something with the traceback string
+            print(traceback_str)
             return -1000
     return optimize_agent
 
