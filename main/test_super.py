@@ -10,6 +10,7 @@
 # limitations under the License.
 # ==============================================================================
 
+import glob
 import os
 import time 
 import argparse
@@ -29,7 +30,7 @@ DEFAULT_MODEL_FILE = r"trained_models/ppo_ryu_2000000_steps_updated" # Speicify 
 DEFAULT_STATE = "Champion.Level1.RyuVsGuile"
 
 
-def make_env(game, state, reset_type, rendering, p2ai):
+def make_env(game, state, reset_type, rendering, p2ai, verbose):
     def _init():
         players = 1
         if p2ai:
@@ -41,72 +42,84 @@ def make_env(game, state, reset_type, rendering, p2ai):
             obs_type=retro.Observations.IMAGE,
             players=players
         )
-        env = StreetFighterSuperWrapper(env, reset_type=reset_type, rendering=rendering, p2ai=p2ai)
+        env = StreetFighterSuperWrapper(env, reset_type=reset_type, rendering=rendering, p2ai=p2ai, verbose=verbose)
         return env
     return _init
 
-parser = argparse.ArgumentParser(description='Reset game stats')
-parser.add_argument('--reset', choices=['round', 'match', 'game'], help='Reset stats for a round, a match, or the whole game', default='round')
-parser.add_argument('--model-file', help='The model file to load. By default trained_models/ppo_ryu_2000000_steps_updated', default=DEFAULT_MODEL_FILE)
-parser.add_argument('--state', help='The state file to load. By default Champion.Level1.RyuVsGuile', default=DEFAULT_STATE)
-parser.add_argument('--skip-render', action='store_true', help='Whether to skip to render the game screen.')
-parser.add_argument('--random-action', action='store_true', help='Use ramdom action instead of')
-parser.add_argument('--num-episodes', type=int, help='Play how many episodes', default=30)
-parser.add_argument('--P2AI', action='store_true', help='AI control player 2.')
+def list_model_files_in_directory(directory):
+    files = glob.glob(directory + '/*.zip')
+    files = [f for f in files if os.path.isfile(f)]
+    return files
 
-args = parser.parse_args()
 
-print("command line args:" + str(args))
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Reset game stats')
+    parser.add_argument('--reset', choices=['round', 'match', 'game'], help='Reset stats for a round, a match, or the whole game', default='round')
+    parser.add_argument('--model-file', help='The model file to load. By default trained_models/ppo_ryu_2000000_steps_updated', default=DEFAULT_MODEL_FILE)
+    parser.add_argument('--model-dir', help='Test all model files in the dir', default="")
+    parser.add_argument('--state', help='The state file to load. By default Champion.Level1.RyuVsGuile', default=DEFAULT_STATE)
+    parser.add_argument('--skip-render', action='store_true', help='Whether to skip to render the game screen.')
+    parser.add_argument('--verbose', action='store_true', help='Whether to display more information.')
+    parser.add_argument('--num-episodes', type=int, help='Play how many episodes', default=10)
+    parser.add_argument('--P2AI', action='store_true', help='AI control player 2.')
 
-game = "StreetFighterIISpecialChampionEdition-Genesis"
-#env = make_env(game, state="Champion.Level12.RyuVsBison")()
-env = make_env(game, state=args.state, reset_type=args.reset, rendering=not args.skip_render, p2ai=args.P2AI)()
-# model = PPO("CnnPolicy", env)
+    args = parser.parse_args()
 
-if not args.random_action:
-    model = PPO.load(args.model_file, env=env)
+    print("command line args:" + str(args))
 
-obs = env.reset()
-done = False
+    game = "StreetFighterIISpecialChampionEdition-Genesis"
+    #env = make_env(game, state="Champion.Level12.RyuVsBison")()
+    env = make_env(game, state=args.state, reset_type=args.reset, rendering=not args.skip_render, p2ai=args.P2AI, verbose=args.verbose)()
+    # model = PPO("CnnPolicy", env)
 
-episode_reward_sum = 0
-num_victory = 0
-
-print("\nFighting Begins!\n")
-
-for _ in range(args.num_episodes):
-    done = False
+    if (args.model_dir != ""):
+        model_files = list_model_files_in_directory(args.model_dir)
+    else:
+        model_files = [args.model_file]
     
-    obs = env.reset()
+    max_winning_rate_model = ""
+    max_winning_rate = 0
+    for model_file in model_files:
+        model = PPO.load(model_file, env=env)
 
-    total_reward = 0
+        obs = env.reset()
+        done = False
 
-    while not done:
-        timestamp = time.time()
+        episode_reward_sum = 0
+        total_player_won_matches = 0
 
-        if args.random_action:
-            action = env.action_space.sample()
-        else:
-            action, _states = model.predict(obs)
+        for _ in range(args.num_episodes):
+            done = False
+            
+            obs = env.reset()
 
-        obs, reward, done, info = env.step(action)
-
-        if reward != 0:
-            total_reward += reward
-            print("Reward: {:.3f}, playerHP: {}, enemyHP:{}".format(reward, info['agent_hp'], info['enemy_hp']))
-        
-
-    if info['enemy_hp'] < 0:
-        print("Victory!")
-        num_victory += 1
-
-    print("Total reward: {}\n".format(total_reward))
-    episode_reward_sum += total_reward
+            total_reward = 0
 
 
-env.close()
-print("Winning rate: {}".format(1.0 * num_victory / args.num_episodes))
-if args.random_action:
-    print("Average reward for random action: {}".format(episode_reward_sum/args.num_episodes))
-else:
-    print("Average reward for {}: {}".format(args.model_file, episode_reward_sum/args.num_episodes))
+            while not done:
+                timestamp = time.time()
+
+                action, _states = model.predict(obs)
+
+                obs, reward, done, info = env.step(action)
+
+                if reward != 0:
+                    total_reward += reward
+                    if args.verbose:            
+                        print("Reward: {:.3f}, playerHP: {}, enemyHP:{}, player_won_matches:{}".format(reward, info['agent_hp'], info['enemy_hp'], info['player_won_matches']))
+                
+            total_player_won_matches += info['player_won_matches']
+
+            if args.verbose:            
+                print("Total player won matches: {}\n".format(total_player_won_matches))
+
+        winning_rate = 1.0 * total_player_won_matches / args.num_episodes
+        print("{} - winning rate: {}".format(model_file, winning_rate))
+        if (winning_rate > max_winning_rate):
+            max_winning_rate = winning_rate
+            max_winning_rate_model = model_file
+        if (max_winning_rate_model != ""):
+            print("Max winning rate model: {} ({}) \n".format(max_winning_rate_model, max_winning_rate))
+
+    env.close()
+

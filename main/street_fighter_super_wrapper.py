@@ -29,11 +29,11 @@ SUPER_ACTION = [
 
 # Custom environment wrapper
 class StreetFighterSuperWrapper(gym.Wrapper):
-    def __init__(self, env, reset_type="round", rendering=False, step_extra_frame=True, p2ai = False):
+    def __init__(self, env, reset_type="round", rendering=False, step_extra_frame=True, p2ai = False, verbose=False):
         super(StreetFighterSuperWrapper, self).__init__(env)
         self._env = env
         self._info = None
-
+        self.verbose = verbose
         self.p2ai = p2ai
         # if p2ai:
         #     self.action_space = gym.spaces.MultiBinary(12)
@@ -62,6 +62,7 @@ class StreetFighterSuperWrapper(gym.Wrapper):
         self.player_won = 0
         self.oppont_won = 0
         self.during_transation = False
+        self.player_won_matches = 0
 
         self._empty_action = [0 for b in self._env.buttons]
     
@@ -75,6 +76,7 @@ class StreetFighterSuperWrapper(gym.Wrapper):
         self.prev_oppont_health = self.full_hp
 
         self.total_timesteps = 0
+        self.player_won_matches = 0
         
         # Clear the frame stack and add the first observation [num_frames] times
         self.frame_stack.clear()
@@ -116,17 +118,16 @@ class StreetFighterSuperWrapper(gym.Wrapper):
         # Render the game if rendering flag is set to True.
         if self.rendering:
             self._env.render()
-            time.sleep(0.01)
+            time.sleep(0.005)
 
         if (len(super_action) > 1):
             for i in range(1, len(super_action) - 1):            
                 action = self._super_action_to_emu_action(super_action, i)
                 obs, _reward, _done, self._info = self._env.step(action)
-                #print (self._info)
                 self.frame_stack.append(obs[::2, ::2, :])
                 if self.rendering:
                     self._env.render()
-                    time.sleep(0.01)
+                    time.sleep(0.005)
 
             while (self._info["agent_status"] == 524):  # Doing special action
                 obs, _reward, _done, self._info = self._env.step(self._empty_action)  # Do nothing if the agent is doing special action.
@@ -134,7 +135,7 @@ class StreetFighterSuperWrapper(gym.Wrapper):
                 self.frame_stack.append(obs[::2, ::2, :])
                 if self.rendering:
                     self._env.render()
-                    time.sleep(0.01)
+                    time.sleep(0.005)
             #print("The action is done. " + str(self._info["agent_status"]))
 
         curr_player_health = self._info['agent_hp']
@@ -143,14 +144,15 @@ class StreetFighterSuperWrapper(gym.Wrapper):
 
         self.total_timesteps += self.num_step_frames
         
-        if (self.during_transation and (curr_player_health < 0 or curr_oppont_health < 0)):
+        if (self.during_transation and (curr_player_health <= 0 or curr_oppont_health <= 0)):
             # During transation between episodes, do nothing
             custom_done = False
             custom_reward = 0
         else:
             self.during_transation = False 
             if (curr_player_health < 0 and curr_oppont_health < 0) or (timesup  and curr_player_health == curr_oppont_health):
-                #print ("Draw round")
+                if self.verbose:
+                    print ("Draw round")
                 custom_reward = 1
                 if (self.reset_type == "round"):
                     custom_done = True
@@ -158,7 +160,8 @@ class StreetFighterSuperWrapper(gym.Wrapper):
                     custom_done = False
                     self.during_transation = True
             elif curr_player_health < 0 or (timesup and curr_player_health < curr_oppont_health):
-                #print("The round is over and player loses.")
+                if self.verbose:
+                    print("The round is over and player loses.")
                 custom_reward = -math.pow(self.full_hp, (curr_oppont_health + 1) / (self.full_hp + 1))    # Use the remaining health points of opponent as penalty. 
                 if (self.reset_type == "round"):
                     custom_done = True
@@ -173,7 +176,8 @@ class StreetFighterSuperWrapper(gym.Wrapper):
                         custom_done = not self.reset_type == "never"
 
             elif curr_oppont_health < 0 or (timesup and curr_player_health > curr_oppont_health):
-                #print("The round is over and player wins.")
+                if self.verbose:
+                    print("The round is over and player wins.")
                 # custom_reward = curr_player_health * self.reward_coeff # Use the remaining health points of player as reward.
                                                                     # Multiply by reward_coeff to make the reward larger than the penalty to avoid cowardice of agent.
 
@@ -191,10 +195,15 @@ class StreetFighterSuperWrapper(gym.Wrapper):
                         self.player_won = 0
                         self.oppont_won = 0
                         custom_done = self.reset_type == "match"
+                        self.player_won_matches += 1
 
             # While the fighting is still going on
             else:
-                custom_reward = self.reward_coeff * (self.prev_oppont_health - curr_oppont_health) - (self.prev_player_health - curr_player_health)
+                if (curr_player_health >= 0 and curr_oppont_health >= 0 
+                        and curr_player_health <= self.prev_player_health and curr_oppont_health <= self.prev_oppont_health):
+                    custom_reward = self.reward_coeff * (self.prev_oppont_health - curr_oppont_health) - (self.prev_player_health - curr_player_health)
+                else:
+                    custom_reward = 0
                 self.prev_player_health = curr_player_health
                 self.prev_oppont_health = curr_oppont_health
                 custom_done = False
@@ -203,5 +212,7 @@ class StreetFighterSuperWrapper(gym.Wrapper):
         #     print("reward:{}".format(custom_reward))
 
         # Max reward is 6 * full_hp = 1054 (damage * 3 + winning_reward * 3) norm_coefficient = 0.001
+        self._info['player_won_matches'] = self.player_won_matches
+
         return self._stack_observation(), 0.001 * custom_reward, custom_done, self._info # reward normalization
     
