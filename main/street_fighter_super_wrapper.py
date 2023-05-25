@@ -149,7 +149,7 @@ class StreetFighterSuperWrapper(gym.Wrapper):
 
         self.total_timesteps += self.num_step_frames
         
-        if (self.during_transation and (curr_player_health <= 0 or curr_oppont_health <= 0)):
+        if (self.during_transation and (curr_player_health <= 0 or curr_oppont_health <= 0 or timesup)):
             # During transation between episodes, do nothing
             custom_done = False
             custom_reward = 0

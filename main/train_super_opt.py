@@ -93,7 +93,6 @@ def make_optimize_agent(args):
             total_player_won_matches = 0
             env = make_env(game, state=args.state, reset_type=args.reset, rendering=args.render, 
                         reward_coeff_base=reward_coeff_base, reward_coeff_coeff=reward_coeff_coeff)()
-            env = DummyVecEnv([lambda: env])
             model = PPO.load(SAVE_PATH, env=env)
             for _ in range(args.eval_episodes):
                 done = False
