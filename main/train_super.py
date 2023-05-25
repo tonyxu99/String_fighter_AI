@@ -27,7 +27,7 @@ def linear_schedule(initial_value, final_value=0.0):
 
     return scheduler
 
-def make_env(game, state, reset_type, rendering, p2ai = False, seed=0):
+def make_env(game, state, reset_type, rendering, p2ai = False, reward_coeff_base = 3.0, reward_coeff_coeff = 0.3, seed=0):
     def _init():
         players = 1
         if p2ai:
@@ -39,7 +39,8 @@ def make_env(game, state, reset_type, rendering, p2ai = False, seed=0):
             obs_type=retro.Observations.IMAGE,
             players=players
         )
-        env = StreetFighterSuperWrapper(env, rendering=rendering, reset_type=reset_type, p2ai=p2ai)
+        env = StreetFighterSuperWrapper(env, rendering=rendering, reset_type=reset_type, p2ai=p2ai, 
+                                        reward_coeff_base=reward_coeff_base, reward_coeff_coeff=reward_coeff_coeff)
         env = Monitor(env)
         env.seed(seed)
         return env
@@ -63,7 +64,8 @@ def main():
                                  
     # Set up the environment and model
     game = "StreetFighterIISpecialChampionEdition-Genesis"
-    env = SubprocVecEnv([make_env(game, state=args.state, reset_type=args.reset, rendering=args.render, p2ai=args.P2AI, seed=i) for i in range(args.num_env)])
+    env = SubprocVecEnv([make_env(game, state=args.state, reset_type=args.reset, rendering=args.render, p2ai=args.P2AI, seed=i,
+                                  reward_coeff_base=3, reward_coeff_coeff=1.5322) for i in range(args.num_env)])
 
     # Set linear schedule for learning rate
     # Start
@@ -84,12 +86,12 @@ def main():
         env,
         device="cuda", 
         verbose=1,
-        n_steps=512,
-        batch_size=512,
-        n_epochs=4,
-        gamma=0.94,
-        learning_rate=lr_schedule,
-        clip_range=clip_range_schedule,
+        n_steps=2464,
+        batch_size=448,
+        n_epochs=6,
+        gamma=0.883,
+        learning_rate=8.775e-05,
+        clip_range=0.2967,
         tensorboard_log=LOG_DIR
     )
 
