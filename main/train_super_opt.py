@@ -85,13 +85,16 @@ def make_optimize_agent(args):
             model = PPO('CnnPolicy', env, tensorboard_log=LOG_DIR, verbose=0, **model_params)
             model.learn(total_timesteps=args.total_steps)
 
+            SAVE_PATH = os.path.join(OPT_DIR, 'trial_{}_best_model'.format(trial.number))
+            model.save(SAVE_PATH)
+
             print("start evaluate model")            
             # Evaluate model 
             total_player_won_matches = 0
             env = make_env(game, state=args.state, reset_type=args.reset, rendering=args.render, 
-                        reward_coeff_base=reward_coeff_base, reward_coeff_coeff=reward_coeff_coeff)
+                        reward_coeff_base=reward_coeff_base, reward_coeff_coeff=reward_coeff_coeff)()
             env = DummyVecEnv([lambda: env])
-            model.set_env(env)
+            model = PPO.load(SAVE_PATH, env=env)
             for _ in range(args.eval_episodes):
                 done = False
                 
@@ -107,8 +110,7 @@ def make_optimize_agent(args):
             print("Finished evaluate model. total_player_won_matches={}".format(total_player_won_matches))
             env.close()
 
-            SAVE_PATH = os.path.join(OPT_DIR, 'trial_{}_best_model'.format(trial.number))
-            model.save(SAVE_PATH)
+
 
             return total_player_won_matches
 
