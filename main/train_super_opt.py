@@ -9,7 +9,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CheckpointCallback
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 
 from street_fighter_super_wrapper import StreetFighterSuperWrapper
 
@@ -90,6 +90,7 @@ def make_optimize_agent(args):
             total_player_won_matches = 0
             env = make_env(game, state=args.state, reset_type=args.reset, rendering=args.render, 
                         reward_coeff_base=reward_coeff_base, reward_coeff_coeff=reward_coeff_coeff)
+            env = DummyVecEnv([lambda: env])
             model.set_env(env)
             for _ in range(args.eval_episodes):
                 done = False
